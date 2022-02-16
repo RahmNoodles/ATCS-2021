@@ -22,8 +22,15 @@ class TicTacToe:
         # TODO: Check if the move is valid
         if row >= 0 and row <= 2:
             if col >= 0 and col <= 2:
-                return True
-
+                if self.board[row][col] == "-":
+                    return True
+    def take_random_turn(self, player):
+        randRow = random.randint(0, len(self.board)-1)
+        randCol = random.randint(0, len(self.board)-1)
+        while not self.is_valid_move(randRow, randCol):
+            randRow = random.randint(0, len(self.board) - 1)
+            randCol = random.randint(0, len(self.board) - 1)
+        self.place_player(player, randRow, randCol)
     def place_player(self, player, row, col):
         # TODO: Place the player on the board
         self.board[row][col] = player
@@ -42,7 +49,10 @@ class TicTacToe:
     def take_turn(self, player):
         # TODO: Simply call the take_manual_turn function
         print(player + "'s Turn")
-        self.take_manual_turn(player)
+        if player == "X":
+            self.take_manual_turn(player)
+        else:
+            self.take_random_turn(player)
 
     def check_col_win(self, player):
         # TODO: Check col win
@@ -129,6 +139,7 @@ class TicTacToe:
                     winner = player1
             if(moves % 2 == 1):
                 self.take_turn(player2)
+                self.print_board()
                 win = self.check_win(player2)
                 if win:
                     winner = player2
