@@ -1,4 +1,5 @@
 import random
+import time
 
 
 class TicTacToe:
@@ -96,12 +97,12 @@ class TicTacToe:
             return (worst, opt_row, opt_col)
 
     def take_minimax_turn(self, player, depth):
-        score, row, col = self.minimax(player, depth)
-        print(score)
-        print(row)
-        print(col)
+        start = time.time()
+        #score, row, col = self.minimax(player, depth)
+        score, row, col = self.minimax_alpha_beta(player, 10, -100, 100)
         self.place_player(player, row, col)
-
+        end = time.time()
+        print("This turn took:", end - start, "seconds")
     def check_col_win(self, player):
         # TODO: Check col win
         win = False
@@ -115,6 +116,49 @@ class TicTacToe:
             if win == True:
                 return True
         return False
+
+    def minimax_alpha_beta(self, player, depth, alpha, beta):
+        opt_row = -1
+        opt_col = -1
+        if self.check_win("X") or self.check_win("O") or self.check_tie() or depth < 1:
+            if self.check_win("X"):
+                return (-10, None, None)
+            elif self.check_win("O"):
+                return (10, None, None)
+            else:
+                return (0, None, None)
+        if player == "O":
+            best = -100
+            for i in range(len(self.board)):
+                for o in range(len(self.board[0])):
+                    if self.is_valid_move(i, o):
+                        if alpha >= beta:
+                            return (best, opt_row, opt_col)
+                        self.place_player(player, i, o)
+                        score = self.minimax("X", depth - 1)[0]
+                        if best < score:
+                            best = score
+                            opt_row = i
+                            opt_col = o
+                            alpha = score
+                        self.place_player("-", i, o)
+            return (best, opt_row, opt_col)
+        if player == "X":
+            worst = 100
+            for i in range(len(self.board)):
+                for o in range(len(self.board[0])):
+                    if self.is_valid_move(i, o):
+                        if alpha >= beta:
+                            return (worst, opt_row, opt_col)
+                        self.place_player(player, i, o)
+                        score = self.minimax("O", depth - 1)[0]
+                        if worst > score:
+                            worst = score
+                            opt_row = i
+                            opt_col = o
+                            beta = score
+                        self.place_player("-", i, o)
+            return (worst, opt_row, opt_col)
 
     def check_row_win(self, player):
         # TODO: Check row win
