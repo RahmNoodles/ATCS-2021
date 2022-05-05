@@ -11,11 +11,12 @@ SCOREBOARD_WIDTH = 100
 CROP_X_PITCH_ADJUSTER = 8
 CROP_Y_PITCH_ADJUSTER = 3
 RADIUS = 10
-SCALING = 1.0
+SCALING = 1
 PITCH_SCALING = 2.78
 BALL_SCALING = 0.25
-BASE_P1_SCORE = 0
-BASE_P2_SCORE = 0
+BALL_SPEED = 15
+INITIAL_BALL_SPEED_ADJUSTER = 3
+CORNER_TO_GOAL_RATIO_ON_PITCH = 4.67
 
 class Pong(arcade.Window):
     """Space Shooter side scroller game
@@ -25,7 +26,7 @@ class Pong(arcade.Window):
     Collisions end the game
     """
 
-    def __init__(self, width, height, title, p1Score, p2Score):
+    def __init__(self, width, height, title):
         """Initialize the game
         """
         super().__init__(width, height, title)
@@ -68,7 +69,7 @@ class Pong(arcade.Window):
         self.ball = arcade.Sprite("data/Ball.png", BALL_SCALING)
         self.ball.center_y = self.height / 2
         self.ball.left = SCREEN_WIDTH/2
-        self.ball.change_x = 5
+        self.ball.change_x = BALL_SPEED/INITIAL_BALL_SPEED_ADJUSTER
         self.all_sprites.append(self.ball)
 
         ball_angle = 0
@@ -118,12 +119,21 @@ class Pong(arcade.Window):
                 or symbol == arcade.key.DOWN
         ):
             self.player2.change_y = 0
+
     def on_collide_with_player(self, player, speed):
         relativeIntersectY = (player.center_y) - self.ball.center_y
         normalizedRelativeIntersectionY = (relativeIntersectY / (player.height / 2))
-        bounceAngle = normalizedRelativeIntersectionY * 5 * math.pi/12
+        bounceAngle = normalizedRelativeIntersectionY * BALL_SPEED * math.pi/12
+        self.ball.change_x = speed * math.cos(bounceAngle)
+        self.ball.change_y = speed * math.sin(bounceAngle)
+
+    def on_collide_with_player2(self, player, speed):
+        relativeIntersectY = (player.center_y) - self.ball.center_y
+        normalizedRelativeIntersectionY = (relativeIntersectY / (player.height / 2))
+        bounceAngle = normalizedRelativeIntersectionY * BALL_SPEED * math.pi / 12
         self.ball.change_x = speed * math.cos(bounceAngle)
         self.ball.change_y = speed * -math.sin(bounceAngle)
+
     def on_draw(self):
         """Called whenever you need to draw your window
         """
@@ -152,30 +162,36 @@ class Pong(arcade.Window):
         # Collide with player
         if self.player.collides_with_sprite(self.ball):
             print("Collide 1")
-            self.on_collide_with_player(self.player, 5)
+            self.on_collide_with_player(self.player, BALL_SPEED)
         if self.player2.collides_with_sprite(self.ball):
             print("Collide 2")
-            self.on_collide_with_player(self.player2, -5)
+            self.on_collide_with_player2(self.player2, -BALL_SPEED)
         if self.ball.top >= self.height or self.ball.bottom <= 0:
             self.ball.change_y = - self.ball.change_y
-        if self.ball.right >= self.width:
+        if self.ball.right >= self.width and self.ball.bottom >= SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH and self.ball.top <= SCREEN_HEIGHT - SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH:
             self.ball.center_x = self.width/2
             self.ball.center_y = self.height / 2
-            self.ball.change_x = 5
+            self.ball.change_x = BALL_SPEED/CORNER_TO_GOAL_RATIO_ON_PITCH
             self.ball.change_y = 0
             print("Player 1 scores!")
             self.p1Score += 1
-        if self.ball.left <= 0:
+        else:
+            if self.ball.right >= self.width:
+                self.ball.change_x = - self.ball.change_x
+        if self.ball.left <= 0 and self.ball.bottom >= SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH and self.ball.top <= SCREEN_HEIGHT - SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH:
             self.ball.center_x = self.width/2
             self.ball.center_y = self.height / 2
-            self.ball.change_x = -5
+            self.ball.change_x = -BALL_SPEED/3
             self.ball.change_y = 0
             print("Player 2 scores!")
             self.p2Score += 1
+        else:
+            if self.ball.left <= 0:
+                self.ball.change_x = - self.ball.change_x
 
 
         if self.ball.change_x == 0:
-            self.ball.change_x = 5
+            self.ball.change_x = BALL_SPEED
             self.ball.change_y = 0
         # Keep the player on screen
 
@@ -192,5 +208,5 @@ class Pong(arcade.Window):
             )
 
 if __name__ == '__main__':
-    game = Pong(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, BASE_P1_SCORE, BASE_P2_SCORE)
+    game = Pong(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     arcade.run()
