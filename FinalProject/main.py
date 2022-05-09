@@ -11,7 +11,7 @@ SCOREBOARD_WIDTH = 100
 CROP_X_PITCH_ADJUSTER = 8
 CROP_Y_PITCH_ADJUSTER = 3
 RADIUS = 10
-SCALING = 1
+SCALING = .5
 PITCH_SCALING = 2.78
 BALL_SCALING = 0.25
 BALL_SPEED = 15
@@ -39,6 +39,9 @@ class Pong(arcade.Window):
         self.all_sprites = arcade.SpriteList()
         self.p1Score = 0
         self.p2Score = 0
+        self.AIUp = False
+        self.AIDown = False
+        self.AIDeadband = 10
 
         self.setup()
 
@@ -93,14 +96,8 @@ class Pong(arcade.Window):
         if symbol == arcade.key.W:
             self.player.change_y = 5
 
-        if symbol == arcade.key.UP:
-            self.player2.change_y = 5
-
         if symbol == arcade.key.S:
             self.player.change_y = -5
-
-        if symbol == arcade.key.DOWN:
-            self.player2.change_y = -5
 
     def on_key_release(self, symbol: int, modifiers: int):
         """Undo movement vectors when movement keys are released
@@ -114,11 +111,31 @@ class Pong(arcade.Window):
                 or symbol == arcade.key.S
         ):
             self.player.change_y = 0
-        if (
-                symbol == arcade.key.UP
-                or symbol == arcade.key.DOWN
-        ):
+
+
+    def AI_input_update(self):
+        if self.AIUp:
+            self.player2.change_y = 5
+
+        if self.AIDown:
+            self.player2.change_y = -5
+
+        if not self.AIUp and not self.AIDown:
             self.player2.change_y = 0
+
+    def AI_position_update(self):
+        change_in_y = self.player2.center_y - self.ball.center_y
+        if change_in_y > self.AIDeadband:
+            self.AIDown = True
+            self.AIUp = False
+        elif change_in_y < - self.AIDeadband:
+            self.AIUp = True
+            self.AIDown = False
+
+        else:
+            self.AIUp = False
+            self.AIDown = False
+
 
     def on_collide_with_player(self, player, speed):
         relativeIntersectY = (player.center_y) - self.ball.center_y
@@ -133,7 +150,6 @@ class Pong(arcade.Window):
         bounceAngle = normalizedRelativeIntersectionY * BALL_SPEED * math.pi / 12
         self.ball.change_x = speed * math.cos(bounceAngle)
         self.ball.change_y = speed * -math.sin(bounceAngle)
-
     def on_draw(self):
         """Called whenever you need to draw your window
         """
@@ -159,13 +175,28 @@ class Pong(arcade.Window):
         # Update everything
         self.all_sprites.update()
 
+        #AI
+        self.AI_position_update()
+        self.AI_input_update()
         # Collide with player
         if self.player.collides_with_sprite(self.ball):
-            print("Collide 1")
             self.on_collide_with_player(self.player, BALL_SPEED)
+            if self.ball.bottom <= self.player.top and self.ball.top >= self.player.bottom and self.ball.right < self.player.right:
+                self.ball.left = self.player.width + 10
+                if self.ball.bottom <= 0:
+                    self.ball.bottom = 10
+                if self.ball.top >= self.height:
+                    self.ball.top = self.height - 10
+                self.ball.change_x = 5
         if self.player2.collides_with_sprite(self.ball):
-            print("Collide 2")
             self.on_collide_with_player2(self.player2, -BALL_SPEED)
+            if self.ball.bottom <= self.player2.top and self.ball.top >= self.player2.bottom and self.ball.left > self.player2.left:
+                if self.ball.bottom <= 0:
+                    self.ball.bottom = 10
+                if self.ball.top >= self.height:
+                    self.ball.top = self.height - 10
+                self.ball.right = self.width - self.player2.width - 10
+                self.ball.change_x = -5
         if self.ball.top >= self.height or self.ball.bottom <= 0:
             self.ball.change_y = - self.ball.change_y
         if self.ball.right >= self.width and self.ball.bottom >= SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH and self.ball.top <= SCREEN_HEIGHT - SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH:
@@ -177,7 +208,7 @@ class Pong(arcade.Window):
             self.p1Score += 1
         else:
             if self.ball.right >= self.width:
-                self.ball.change_x = - self.ball.change_x
+                self.ball.change_x = -5
         if self.ball.left <= 0 and self.ball.bottom >= SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH and self.ball.top <= SCREEN_HEIGHT - SCREEN_HEIGHT/CORNER_TO_GOAL_RATIO_ON_PITCH:
             self.ball.center_x = self.width/2
             self.ball.center_y = self.height / 2
@@ -187,7 +218,7 @@ class Pong(arcade.Window):
             self.p2Score += 1
         else:
             if self.ball.left <= 0:
-                self.ball.change_x = - self.ball.change_x
+                self.ball.change_x = 5
 
 
         if self.ball.change_x == 0:
